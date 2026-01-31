@@ -84,8 +84,100 @@ func RemoveCartItem(ctx context.Context, db *pgxpool.Pool, userID string, produc
 	return nil
 }
 
-func BuyItemFromCart() {
+// BuyItemFromCart выполняет покупку всех товаров из корзины пользователя
+func BuyItemFromCart(ctx context.Context, db *pgxpool.Pool, userID string) (orderID uuid.UUID, totalPrice uint64, err error) {
+	// Начинаем транзакцию
+	tx, err := db.Begin(ctx)
 
+	if err != nil {
+		return uuid.Nil, 0, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	// Получаем все товары из корзины с их ценами
+	query := `
+		SELECT c.product_id, p.price, c.quantity
+		FROM cart c
+		JOIN products p ON c.product_id = p.product_id
+		WHERE c.user_id = $1
+	`
+
+	rows, err := tx.Query(ctx, query, userID)
+
+	if err != nil {
+		return uuid.Nil, 0, err
+	}
+
+	defer rows.Close()
+
+	type OrderItem struct {
+		ProductID uuid.UUID
+		Price     uint64
+		Quantity  int
+	}
+
+	var orderItems []OrderItem
+	var total uint64
+
+	for rows.Next() {
+		var item OrderItem
+
+		err := rows.Scan(&item.ProductID, &item.Price, &item.Quantity)
+
+		if err != nil {
+			return uuid.Nil, 0, err
+		}
+
+		total += item.Price * uint64(item.Quantity)
+
+		orderItems = append(orderItems, item)
+	}
+
+	if len(orderItems) == 0 {
+		return uuid.Nil, 0, ErrCantGetItem
+	}
+
+	// Создаем заказ
+	orderID = uuid.New()
+
+	orderQuery := `
+		INSERT INTO orders (order_id, user_id, total_price, ordered_at, status)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+
+	_, err = tx.Exec(ctx, orderQuery, orderID, userID, total, time.Now().UTC(), "pending")
+
+	if err != nil {
+		return uuid.Nil, 0, ErrCantBuyCartItem
+	}
+
+	// Добавляем товары в order_items
+	for _, item := range orderItems {
+		_, err = tx.Exec(ctx,
+			"INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5)",
+			uuid.New(), orderID, item.ProductID, item.Quantity, item.Price)
+
+		if err != nil {
+			return uuid.Nil, 0, ErrCantBuyCartItem
+		}
+	}
+
+	// Очищаем корзину
+	_, err = tx.Exec(ctx, "DELETE FROM cart WHERE user_id = $1", userID)
+
+	if err != nil {
+		return uuid.Nil, 0, ErrCantBuyCartItem
+	}
+
+	// Коммитим транзакцию
+	err = tx.Commit(ctx)
+
+	if err != nil {
+		return uuid.Nil, 0, ErrCantBuyCartItem
+	}
+
+	return orderID, total, nil
 }
 
 // InstantBuyer выполняет мгновенную покупку одного товара

@@ -139,7 +139,52 @@ func (app *Application) GetItemFromCart() gin.HandlerFunc {
 }
 
 func (app *Application) BuyFromCart() gin.HandlerFunc {
-	return nil
+	return func(c *gin.Context) {
+		// Получаем email пользователя из контекста (установлен middleware)
+		email, exists := c.Get("email")
+
+		if !exists {
+			log.Println("user email not found in context")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		defer cancel()
+
+		// Получаем user_id по email
+		var userID string
+
+		err := app.DB.QueryRow(ctx, "SELECT user_id FROM users WHERE email = $1", email).Scan(&userID)
+
+		if err != nil {
+			log.Printf("error finding user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to find user"})
+			return
+		}
+
+		// Вызываем функцию из database слоя
+		orderID, totalPrice, err := database.BuyItemFromCart(ctx, app.DB, userID)
+
+		if err != nil {
+			if err == database.ErrCantGetItem {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "cart is empty"})
+
+			} else {
+				log.Printf("error processing cart purchase: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process order"})
+			}
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":     "order placed successfully",
+			"order_id":    orderID,
+			"total_price": totalPrice,
+		})
+	}
 }
 
 func (app *Application) InstantBuy() gin.HandlerFunc {
