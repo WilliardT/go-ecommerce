@@ -24,31 +24,39 @@ type Application struct {
 	DB *pgxpool.Pool
 }
 
-// HashPassword хеширует пароль с использованием bcrypt
+// хеширует пароль с использованием bcrypt
 func HashPassword(password string) string {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
 	if err != nil {
 		log.Panic(err)
 	}
+
 	return string(hashedPassword)
 }
 
-// VerifyPassword проверяет соответствие пароля хешу
+// проверяет соответствие пароля хешу
 func VerifyPassword(userPassword string, givenPassword string) (bool, string) {
 	err := bcrypt.CompareHashAndPassword([]byte(givenPassword), []byte(userPassword))
+	valid := true
+	msg := ""
+
 	if err != nil {
-		return false, "Login or password is incorrect"
+		msg = "Login or password is incorrect"
+		valid = false
 	}
-	return true, ""
+
+	return valid, msg
 }
 
-// SignUp - обработчик для регистрации нового пользователя.
+// обработчик для регистрации нового пользователя.
 func (app *Application) SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		var user models.User
+
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
 			return
@@ -62,8 +70,11 @@ func (app *Application) SignUp() gin.HandlerFunc {
 
 		// Проверяем, существует ли пользователь с таким email или телефоном
 		var count int
+
 		query := "SELECT COUNT(*) FROM users WHERE email = $1 OR phone = $2"
+
 		err := app.DB.QueryRow(ctx, query, user.Email, user.Phone).Scan(&count)
+
 		if err != nil {
 			log.Printf("Error checking for existing user: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request"})
@@ -124,6 +135,7 @@ func (app *Application) Login() gin.HandlerFunc {
 		defer cancel()
 
 		var user models.User
+
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
 			return
@@ -131,7 +143,9 @@ func (app *Application) Login() gin.HandlerFunc {
 
 		// Ищем пользователя в базе данных по email
 		var foundUser models.User
+
 		query := "SELECT id, first_name, last_name, password, email, phone, user_id, created_at, updated_at FROM users WHERE email = $1"
+
 		err := app.DB.QueryRow(ctx, query, user.Email).Scan(
 			&foundUser.ID,
 			&foundUser.First_Name,
@@ -151,6 +165,7 @@ func (app *Application) Login() gin.HandlerFunc {
 
 		// Проверяем пароль
 		passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
+
 		if !passwordIsValid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": msg})
 			return
@@ -158,6 +173,7 @@ func (app *Application) Login() gin.HandlerFunc {
 
 		// Генерируем новые токены
 		token, refreshToken, err := generate.TokenGenerator(*foundUser.Email, *foundUser.First_Name, *foundUser.Last_Name)
+
 		if err != nil {
 			log.Printf("Error generating tokens: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication tokens"})
@@ -166,6 +182,7 @@ func (app *Application) Login() gin.HandlerFunc {
 
 		// Обновляем токены в базе данных
 		err = generate.UpdateAllTokens(app.DB, token, refreshToken, foundUser.User_ID)
+
 		if err != nil {
 			log.Printf("Error updating tokens: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})
