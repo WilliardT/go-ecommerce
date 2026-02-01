@@ -204,9 +204,46 @@ func (app *Application) ProductViewerAdmin() gin.HandlerFunc {
 }
 
 func (app *Application) SearchProduct() gin.HandlerFunc {
-	// TODO: Реализовать логику поиска продуктов
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		queryParam := c.Query("name")
+
+		if queryParam == "" {
+			log.Println("query is empty")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "search query is required"})
+			return
+		}
+
+		query := "SELECT product_id, product_name, price, rating, image FROM products WHERE product_name ILIKE '%' || $1 || '%'"
+
+		rows, err := app.DB.Query(ctx, query, queryParam)
+
+		if err != nil {
+			log.Printf("error searching products: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search products"})
+			return
+		}
+
+		defer rows.Close()
+
+		var productList []models.Product
+
+		for rows.Next() {
+			var product models.Product
+
+			err := rows.Scan(&product.Product_ID, &product.Product_Name, &product.Price, &product.Rating, &product.Image)
+
+			if err != nil {
+				log.Printf("error scanning product: %v", err)
+				continue
+			}
+
+			productList = append(productList, product)
+		}
+
+		c.JSON(http.StatusOK, gin.H{"products": productList})
 	}
 }
 
