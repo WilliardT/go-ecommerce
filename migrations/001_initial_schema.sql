@@ -9,6 +9,21 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Таблица адресов
+CREATE TABLE IF NOT EXISTS addresses (
+    address_id UUID PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    house VARCHAR(100),
+    street VARCHAR(100),
+    city VARCHAR(100),
+    pincode VARCHAR(20),
+    state VARCHAR(100),
+    address_type VARCHAR(20) CHECK (address_type IN ('home', 'work', 'other')),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
 -- Таблица корзины
 CREATE TABLE IF NOT EXISTS cart (
     id UUID PRIMARY KEY,
@@ -44,6 +59,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 -- Индексы для оптимизации запросов
+CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
 CREATE INDEX IF NOT EXISTS idx_cart_user_id ON cart(user_id);
 CREATE INDEX IF NOT EXISTS idx_cart_product_id ON cart(product_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
