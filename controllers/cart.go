@@ -135,7 +135,55 @@ func (app *Application) RemoveItem() gin.HandlerFunc {
 }
 
 func (app *Application) GetItemFromCart() gin.HandlerFunc {
-	return nil
+	return func(c *gin.Context) {
+		// email пользователя из контекста
+		email, exists := c.Get("email")
+
+		if !exists {
+			log.Println("user email not found in context")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// user_id по email
+		var userID string
+
+		err := app.DB.QueryRow(ctx, "SELECT user_id FROM users WHERE email = $1", email).Scan(&userID)
+
+		if err != nil {
+			log.Printf("error finding user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to find user"})
+			return
+		}
+
+		// Вызываем функцию из database слоя
+		cartItems, err := database.GetCartItems(ctx, app.DB, userID)
+
+		if err != nil {
+			log.Printf("error fetching cart items: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch cart items"})
+			return
+		}
+
+		// Подсчитываем общую стоимость
+		var totalPrice uint64
+
+		totalItems := 0
+
+		for _, item := range cartItems {
+			totalPrice += item.Price * uint64(item.Quantity)
+			totalItems += item.Quantity
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"cart":        cartItems,
+			"total_items": totalItems,
+			"total_price": totalPrice,
+		})
+	}
 }
 
 func (app *Application) BuyFromCart() gin.HandlerFunc {

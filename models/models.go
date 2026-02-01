@@ -40,6 +40,16 @@ type PoductUser struct {
 	Image        *string   `json:"image" db:"image"`
 }
 
+// товар в корзине с деталями
+type CartItem struct {
+	ProductID   uuid.UUID `json:"product_id"`
+	ProductName string    `json:"product_name"`
+	Price       uint64    `json:"price"`
+	Rating      *uint8    `json:"rating"`
+	Image       *string   `json:"image"`
+	Quantity    int       `json:"quantity"`
+}
+
 type Address struct {
 	Addres_ID uuid.UUID `json:"address_id" db:"address_id"`
 	House     *string   `json:"house_name" db:"house_name"`

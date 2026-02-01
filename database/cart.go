@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"ec-platform/models"
 	"errors"
 	"time"
 
@@ -82,6 +83,47 @@ func RemoveCartItem(ctx context.Context, db *pgxpool.Pool, userID string, produc
 	}
 
 	return nil
+}
+
+// получить все товары из корзины пользователя с деталями
+func GetCartItems(ctx context.Context, db *pgxpool.Pool, userID string) ([]models.CartItem, error) {
+	query := `
+		SELECT
+			p.product_id,
+			p.product_name,
+			p.price,
+			p.rating,
+			p.image,
+			c.quantity
+		FROM cart c
+		JOIN products p ON c.product_id = p.product_id
+		WHERE c.user_id = $1
+		ORDER BY c.created_at DESC
+	`
+
+	rows, err := db.Query(ctx, query, userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var cartItems []models.CartItem
+
+	for rows.Next() {
+		var item models.CartItem
+
+		err := rows.Scan(&item.ProductID, &item.ProductName, &item.Price, &item.Rating, &item.Image, &item.Quantity)
+
+		if err != nil {
+			return nil, err
+		}
+
+		cartItems = append(cartItems, item)
+	}
+
+	return cartItems, nil
 }
 
 // BuyItemFromCart выполняет покупку всех товаров из корзины пользователя
