@@ -208,21 +208,14 @@ func (app *Application) SearchProduct() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		queryParam := c.Query("name")
+		// Получаем все Product из базы данных
+		query := "SELECT product_id, product_name, price, rating, image FROM products ORDER BY product_name"
 
-		if queryParam == "" {
-			log.Println("query is empty")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "search query is required"})
-			return
-		}
-
-		query := "SELECT product_id, product_name, price, rating, image FROM products WHERE product_name ILIKE '%' || $1 || '%'"
-
-		rows, err := app.DB.Query(ctx, query, queryParam)
+		rows, err := app.DB.Query(ctx, query)
 
 		if err != nil {
-			log.Printf("error searching products: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search products"})
+			log.Printf("error fetching products: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch products"})
 			return
 		}
 
@@ -247,9 +240,49 @@ func (app *Application) SearchProduct() gin.HandlerFunc {
 	}
 }
 
-func SearchProductByQuery() gin.HandlerFunc {
-	// TODO: Реализовать логику поиска по запросу
+func (app *Application) SearchProductByQuery() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		queryParam := c.Query("name")
+
+		if queryParam == "" {
+			log.Println("search query is empty")
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusNotFound, gin.H{"error": "search query is required"})
+			c.Abort()
+			return
+		}
+
+		// Используем ILIKE для case-insensitive поиска в PostgreSQL
+		query := "SELECT product_id, product_name, price, rating, image FROM products WHERE product_name ILIKE '%' || $1 || '%' ORDER BY product_name"
+
+		rows, err := app.DB.Query(ctx, query, queryParam)
+
+		if err != nil {
+			log.Printf("error searching products: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search products"})
+			return
+		}
+
+		defer rows.Close()
+
+		var searchProducts []models.Product
+
+		for rows.Next() {
+			var product models.Product
+
+			err := rows.Scan(&product.Product_ID, &product.Product_Name, &product.Price, &product.Rating, &product.Image)
+
+			if err != nil {
+				log.Printf("error scanning product: %v", err)
+				continue
+			}
+
+			searchProducts = append(searchProducts, product)
+		}
+
+		c.JSON(http.StatusOK, gin.H{"products": searchProducts})
 	}
 }
