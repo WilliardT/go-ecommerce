@@ -4,6 +4,7 @@ import (
 	"context"
 	"ec-platform/models"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,7 @@ func AddProductToCart(ctx context.Context, db *pgxpool.Pool, userID string, prod
 	err := db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM products WHERE product_id = $1)", productID).Scan(&productExists)
 
 	if err != nil {
+		log.Printf("error checking product existence: %v", err)
 		return err
 	}
 

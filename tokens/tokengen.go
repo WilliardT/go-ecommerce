@@ -66,7 +66,7 @@ func TokenGenerator(email string, firstname string, lastname string) (signedToke
 	return signedToken, signedRefreshToken, nil
 }
 
-// ValidateToken проверяет валидность токена
+// проверяет валидность токена
 func ValidateToken(signedToken string) (claims *SignedDetails, err error) {
 	if SECRET_KEY == "" {
 		SECRET_KEY = "your-secret-key-change-this-in-production"
