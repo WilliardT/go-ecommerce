@@ -37,6 +37,7 @@ func main() {
 	router.Use(middleware.Authentication())
 	router.GET("/addtocart", app.AddToCart())
 	router.GET("/removeitem", app.RemoveItem())
+	router.GET("/listcart", app.GetItemFromCart())
 	router.GET("/cartcheckout", app.BuyFromCart())
 	router.GET("/instantbuy", app.InstantBuy())
 
