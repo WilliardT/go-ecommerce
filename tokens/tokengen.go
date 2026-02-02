@@ -114,6 +114,7 @@ func UpdateAllTokens(db *pgxpool.Pool, signedToken string, signedRefreshToken st
 	`
 
 	_, err := db.Exec(ctx, updateQuery, signedToken, signedRefreshToken, time.Now().UTC(), userId)
+
 	if err != nil {
 		log.Printf("Error updating tokens for user %s: %v", userId, err)
 		return err

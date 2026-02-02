@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Authentication проверяет JWT токен в заголовке Authorization
+// проверяет JWT токен в заголовке Authorization
 func Authentication() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientToken := c.GetHeader("Authorization")
@@ -25,6 +25,7 @@ func Authentication() gin.HandlerFunc {
 
 		// Валидируем токен
 		claims, err := generate.ValidateToken(clientToken)
+
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
