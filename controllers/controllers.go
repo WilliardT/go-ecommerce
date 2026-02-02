@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"ec-platform/database"
 	"ec-platform/models"
 	generate "ec-platform/tokens"
 
@@ -197,9 +198,42 @@ func (app *Application) Login() gin.HandlerFunc {
 }
 
 func (app *Application) ProductViewerAdmin() gin.HandlerFunc {
-	// TODO: Реализовать логику просмотра продуктов для админа
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var product models.Product
+
+		if err := c.BindJSON(&product); err != nil {
+			log.Printf("invalid request body: %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+
+		// Проверяем обязательные поля
+		if product.Product_Name == nil || *product.Product_Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "product_name is required"})
+			return
+		}
+
+		if product.Price == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "price is required"})
+			return
+		}
+
+		// Добавляем продукт в базу данных
+		productID, err := database.AddProduct(ctx, app.DB, &product)
+
+		if err != nil {
+			log.Printf("error adding product: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add product"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message":    "product added successfully",
+			"product_id": productID,
+		})
 	}
 }
 
