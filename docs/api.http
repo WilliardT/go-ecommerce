@@ -1,0 +1,191 @@
+### Go E-Commerce Platform API
+### Base URL: http://localhost:8000
+
+### Signup - Регистрация нового пользователя
+POST http://localhost:8000/users/signup
+Content-Type: application/json
+
+{
+  "first_name": "Vasiliy",
+  "last_name": "Ivanov",
+  "email": "Vasia.ddd@example.com",
+  "phone": "+79291234567",
+  "password": "secur3Pass123"
+}
+
+### Login - Вход и получение JWT токена
+POST http://localhost:8000/users/login
+Content-Type: application/json
+
+{
+  "email": "ivan.petrov@example.com",
+  "password": "securePass123"
+}
+
+> {%
+  client.global.set("auth_token", response.body.token);
+  client.log("Token saved: " + response.body.token.substring(0, 20) + "...");
+%}
+
+### ============================================
+### PRODUCTS (Public)
+### ============================================
+
+### Get All Products - Получить все товары
+GET http://localhost:8000/users/productview
+
+### Search Products - Поиск товаров по названию
+GET http://localhost:8000/users/search?name=laptop
+
+### Search Products - iPhone
+GET http://localhost:8000/users/search?name=iphone
+
+### ============================================
+### ADMIN - PRODUCTS
+### ============================================
+
+### Add Product - Добавить товар (admin)
+POST http://localhost:8000/admin/addproduct
+Content-Type: application/json
+
+{
+  "product_name": "MacBook Pro 16",
+  "price": 250000,
+  "rating": 5,
+  "image": "https://example.com/macbook.jpg"
+}
+
+### ============================================
+### CART (Protected - requires Bearer token)
+### ============================================
+
+### Add to Cart - Добавить Laptop в корзину
+GET http://localhost:8000/addtocart?id=550e8400-e29b-41d4-a716-446655440001
+Authorization: Bearer {{auth_token}}
+
+### Add to Cart - Добавить iPhone в корзину
+GET http://localhost:8000/addtocart?id=550e8400-e29b-41d4-a716-446655440002
+Authorization: Bearer {{auth_token}}
+
+### Add to Cart - Добавить Headphones в корзину
+GET http://localhost:8000/addtocart?id=550e8400-e29b-41d4-a716-446655440003
+Authorization: Bearer {{auth_token}}
+
+### View Cart - Просмотр корзины
+GET http://localhost:8000/listcart
+Authorization: Bearer {{auth_token}}
+
+### Remove from Cart - Удалить Laptop из корзины
+GET http://localhost:8000/removeitem?id=550e8400-e29b-41d4-a716-446655440001
+Authorization: Bearer {{auth_token}}
+
+### ============================================
+### CHECKOUT (Protected)
+### ============================================
+
+### Cart Checkout - Оформить заказ (купить всю корзину)
+GET http://localhost:8000/cartcheckout
+Authorization: Bearer {{auth_token}}
+
+### Instant Buy - Мгновенная покупка (минуя корзину)
+GET http://localhost:8000/instantbuy?id=550e8400-e29b-41d4-a716-446655440005
+Authorization: Bearer {{auth_token}}
+
+### ============================================
+### ADDRESSES (Protected)
+### ============================================
+
+### Add Address - Добавить адрес
+POST http://localhost:8000/addaddress
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "house": "25",
+  "street": "Tverskaya",
+  "city": "Moscow",
+  "pincode": "125009",
+  "state": "Moscow"
+}
+
+### Edit Home Address - Редактировать домашний адрес
+PUT http://localhost:8000/edithomeaddress?id=YOUR_ADDRESS_ID
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "house": "30",
+  "street": "Arbat",
+  "city": "Moscow",
+  "pincode": "119019",
+  "state": "Moscow"
+}
+
+### Edit Work Address - Редактировать рабочий адрес
+PUT http://localhost:8000/editworkaddress?id=YOUR_ADDRESS_ID
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "house": "10",
+  "street": "Lenina",
+  "city": "Moscow",
+  "pincode": "125009",
+  "state": "Moscow"
+}
+
+### Delete Address - Удалить адрес
+DELETE http://localhost:8000/deleteaddress?id=YOUR_ADDRESS_ID
+Authorization: Bearer {{auth_token}}
+
+### ============================================
+### TESTING FLOW - Complete E2E Test
+### ============================================
+
+### 1. Register new user
+POST http://localhost:8000/users/signup
+Content-Type: application/json
+
+{
+  "first_name": "Test",
+  "last_name": "User",
+  "email": "test@example.com",
+  "phone": "+79999999999",
+  "password": "test123456"
+}
+
+### 2. Login
+POST http://localhost:8000/users/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "test123456"
+}
+
+> {%
+  client.global.set("auth_token", response.body.token);
+%}
+
+### 3. View all products
+GET http://localhost:8000/users/productview
+
+### 4. Add items to cart
+GET http://localhost:8000/addtocart?id=550e8400-e29b-41d4-a716-446655440001
+Authorization: Bearer {{auth_token}}
+
+###
+GET http://localhost:8000/addtocart?id=550e8400-e29b-41d4-a716-446655440002
+Authorization: Bearer {{auth_token}}
+
+### 5. View cart
+GET http://localhost:8000/listcart
+Authorization: Bearer {{auth_token}}
+
+### 6. Checkout
+GET http://localhost:8000/cartcheckout
+Authorization: Bearer {{auth_token}}
+
+### 7. Verify cart is empty
+GET http://localhost:8000/listcart
+Authorization: Bearer {{auth_token}}

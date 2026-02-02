@@ -35,11 +35,19 @@ func main() {
 
 	// Защищенные роуты (с аутентификацией)
 	router.Use(middleware.Authentication())
+
+	// Cart
 	router.GET("/addtocart", app.AddToCart())
 	router.GET("/removeitem", app.RemoveItem())
 	router.GET("/listcart", app.GetItemFromCart())
 	router.GET("/cartcheckout", app.BuyFromCart())
 	router.GET("/instantbuy", app.InstantBuy())
+
+	// Addresses
+	router.POST("/addaddress", app.AddAdress())
+	router.PUT("/edithomeaddress", app.EditHomeAddress())
+	router.PUT("/editworkaddress", app.EditWorkAddress())
+	router.DELETE("/deleteaddress", app.DeleteAddress())
 
 	log.Fatal(router.Run(":" + port))
 }
