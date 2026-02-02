@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"ec-platform/database"
+	"ec-platform/models"
 	"log"
 	"net/http"
 	"time"
@@ -12,7 +13,52 @@ import (
 )
 
 func (app *Application) AddAdress() gin.HandlerFunc {
-	return nil
+	return func(c *gin.Context) {
+		// Получаем email пользователя из контекста
+		email, exists := c.Get("email")
+
+		if !exists {
+			log.Println("user email not found in context")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		// Парсим адрес из request body
+		var address models.Address
+		if err := c.BindJSON(&address); err != nil {
+			log.Printf("invalid request body: %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Получаем user_id по email
+		var userID string
+
+		err := app.DB.QueryRow(ctx, "SELECT user_id FROM users WHERE email = $1", email).Scan(&userID)
+
+		if err != nil {
+			log.Printf("error finding user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to find user"})
+			return
+		}
+
+		// Вызываем функцию из database слоя
+		addressID, err := database.AddAddress(ctx, app.DB, userID, &address)
+
+		if err != nil {
+			log.Printf("error adding address: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add address"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message":    "address added successfully",
+			"address_id": addressID,
+		})
+	}
 }
 
 func (app *Application) EditHomeAddress() gin.HandlerFunc {
