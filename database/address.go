@@ -43,6 +43,38 @@ func AddAddress(ctx context.Context, db *pgxpool.Pool, userID string, address *m
 	return addressID, nil
 }
 
+// UpdateAddress обновляет адрес пользователя
+func UpdateAddress(ctx context.Context, db *pgxpool.Pool, userID string, addressID uuid.UUID, address *models.Address) error {
+	query := `
+		UPDATE addresses
+		SET house = $1, street = $2, city = $3, pincode = $4, state = $5, updated_at = $6
+		WHERE address_id = $7 AND user_id = $8
+	`
+
+	result, err := db.Exec(ctx, query,
+		address.House,
+		address.Street,
+		address.City,
+		address.Pincode,
+		address.State,
+		time.Now().UTC(),
+		addressID,
+		userID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return ErrAddressNotFound
+	}
+
+	return nil
+}
+
 // удаляет адрес пользователя по address_id
 func DeleteAddress(ctx context.Context, db *pgxpool.Pool, userID string, addressID uuid.UUID) error {
 	// Проверяем, что адрес принадлежит пользователю, и удаляем его
