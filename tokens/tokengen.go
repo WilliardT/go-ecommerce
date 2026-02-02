@@ -17,10 +17,11 @@ type SignedDetails struct {
 	Email      string
 	First_Name string
 	Last_Name  string
+	Uid        string
 	jwt.RegisteredClaims
 }
 
-// TokenGenerator генерирует access и refresh токены
+// генерирует access и refresh токены
 func TokenGenerator(email string, firstname string, lastname string) (signedToken string, signedRefreshToken string, err error) {
 	if SECRET_KEY == "" {
 		SECRET_KEY = "your-secret-key-change-this-in-production"
@@ -39,20 +40,26 @@ func TokenGenerator(email string, firstname string, lastname string) (signedToke
 
 	refreshClaims := &SignedDetails{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(168 * time.Hour)), // 7 дней
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(168 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	signedToken, err = token.SignedString([]byte(SECRET_KEY))
+
 	if err != nil {
 		return "", "", err
 	}
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+
 	signedRefreshToken, err = refreshToken.SignedString([]byte(SECRET_KEY))
+
 	if err != nil {
+		log.Panic(err)
+
 		return "", "", err
 	}
 
@@ -68,10 +75,12 @@ func ValidateToken(signedToken string) (claims *SignedDetails, err error) {
 	token, err := jwt.ParseWithClaims(
 		signedToken,
 		&SignedDetails{},
+
 		func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
+
 			return []byte(SECRET_KEY), nil
 		},
 	)
@@ -81,14 +90,19 @@ func ValidateToken(signedToken string) (claims *SignedDetails, err error) {
 	}
 
 	claims, ok := token.Claims.(*SignedDetails)
+
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, fmt.Errorf("token is already expired")
 	}
 
 	return claims, nil
 }
 
-// UpdateAllTokens обновляет токены пользователя в базе данных
+// обновляет токены пользователя в базе данных
 func UpdateAllTokens(db *pgxpool.Pool, signedToken string, signedRefreshToken string, userId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
