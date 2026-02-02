@@ -1,3 +1,18 @@
+-- Таблица пользователей (должна быть первой, так как на нее ссылаются другие таблицы)
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY,
+    first_name VARCHAR(30) NOT NULL,
+    last_name VARCHAR(30) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) UNIQUE NOT NULL,
+    user_id VARCHAR(255) UNIQUE NOT NULL,
+    token TEXT,
+    refresh_token TEXT,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
 -- Таблица продуктов
 CREATE TABLE IF NOT EXISTS products (
     product_id UUID PRIMARY KEY,

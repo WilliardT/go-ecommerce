@@ -1,1 +1,19 @@
+# Environment variables
 .env
+
+# Binaries
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Docker volumes (если используется локальный bind mount)
+postgres_data/
+pgadmin_data/
+
+# Temporary files
+tmp/
+temp/
+*.log

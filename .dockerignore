@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# Local files
+.local
+.env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Documentation, etc
+*.md
+.local/
+
+# Docker
+docker-compose*.yaml
+Dockerfile*
+
+# Tests
+*_test.go
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+
+# Temporary files
+tmp/
+temp/
