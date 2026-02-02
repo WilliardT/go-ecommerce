@@ -128,7 +128,7 @@ func GetCartItems(ctx context.Context, db *pgxpool.Pool, userID string) ([]model
 	return cartItems, nil
 }
 
-// BuyItemFromCart выполняет покупку всех товаров из корзины пользователя
+// выполняет покупку всех товаров из корзины пользователя
 func BuyItemFromCart(ctx context.Context, db *pgxpool.Pool, userID string) (orderID uuid.UUID, totalPrice uint64, err error) {
 	// Начинаем транзакцию
 	tx, err := db.Begin(ctx)
@@ -155,17 +155,11 @@ func BuyItemFromCart(ctx context.Context, db *pgxpool.Pool, userID string) (orde
 
 	defer rows.Close()
 
-	type OrderItem struct {
-		ProductID uuid.UUID
-		Price     uint64
-		Quantity  int
-	}
-
-	var orderItems []OrderItem
+	var orderItems []models.OrderItem
 	var total uint64
 
 	for rows.Next() {
-		var item OrderItem
+		var item models.OrderItem
 
 		err := rows.Scan(&item.ProductID, &item.Price, &item.Quantity)
 
@@ -224,7 +218,7 @@ func BuyItemFromCart(ctx context.Context, db *pgxpool.Pool, userID string) (orde
 	return orderID, total, nil
 }
 
-// InstantBuyer выполняет мгновенную покупку одного товара
+// выполняет покупку одного товара
 func InstantBuyer(ctx context.Context, db *pgxpool.Pool, userID string, productID uuid.UUID) (orderID uuid.UUID, totalPrice uint64, err error) {
 	// Начинаем транзакцию
 	tx, err := db.Begin(ctx)

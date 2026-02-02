@@ -50,6 +50,13 @@ type CartItem struct {
 	Quantity    int       `json:"quantity"`
 }
 
+// элемент заказа (для order_items таблицы)
+type OrderItem struct {
+	ProductID uuid.UUID `json:"product_id"`
+	Price     uint64    `json:"price"`
+	Quantity  int       `json:"quantity"`
+}
+
 type Address struct {
 	Addres_ID uuid.UUID `json:"address_id" db:"address_id"`
 	House     *string   `json:"house_name" db:"house_name"`
